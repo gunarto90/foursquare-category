@@ -15,27 +15,25 @@ from datetime import datetime
 import time
 
 # Setting variables
-dataset = 'brighkite'
-global f_config, f_categories, f_users, f_checkins, f_friends, f_venues, f_profile
-f_config = 'config_secret.json'
-f_categories = 'categories.csv'
-f_users = dataset + '/user.csv'
-f_checkins = dataset + '/checkin_multiuser.csv'
-f_friends = dataset + '/friend.csv'
-f_venues = dataset + '/venue.csv'
-f_profile = 'users' # folder for each user profile
+f_config = 'config.json'
+f_secret = 'config_secret.json'
+# f_categories = 'categories.csv'
+# f_users = dataset + '/user.csv'
+# f_checkins = dataset + '/checkin_multiuser.csv'
+# f_friends = dataset + '/friend.csv'
+# f_venues = dataset + '/venue.csv'
+#f_profile = 'users' # folder for each user profile
 
-search_area = 50 # in meters
-category_parent = 1
+#search_area = 50 # in meters
 input_folder = ''
 
-USING_PARENT_CATEGORY = True
-USING_CATEGORY = False
-USING_CATEGORY_TIME = False
-USING_CATEGORY_DAY = False
-USING_CATEGORY_DAY_TIME = False
-USING_TIME = False
-USING_DAY_TIME = False
+# USING_PARENT_CATEGORY = True
+# USING_CATEGORY = True
+# USING_CATEGORY_TIME = False
+# USING_CATEGORY_DAY = False
+# USING_CATEGORY_DAY_TIME = False
+# USING_TIME = True
+# USING_DAY_TIME = True
 
 # Global variables
 users = {}
@@ -136,17 +134,17 @@ def write_to_file(filename, text, append=True):
         fw.write(str(text) + '\n')
 
 # Foursquare related
-def auth_4sq():
+def auth_4sq(client_id, client_secret):
     # Construct the client object
     client = foursquare.Foursquare(client_id=client_id, client_secret=client_secret)
     # Build the authorization url for your app
     auth_uri = client.oauth.auth_url()
     return client
 
-def search_venue_categories(lat, lon):
+def search_venue_categories(lat, lon, search_radius):
     cat_ids = []
     ll = str(lat) + ',' + str(lon)
-    b = client.venues.search(params={'intent':'browse', 'll': ll, 'radius':search_area})
+    b = client.venues.search(params={'intent':'browse', 'll': ll, 'radius':search_radius})
     venues = b['venues']
     for v in venues:
         cats = v['categories']
@@ -191,7 +189,7 @@ def init_users(filename):
     print 'Initialized {0} users'.format(counter)
     show_object_size(users, 'users')
 
-def init_checkins(filename):
+def init_checkins(filename, search_radius):
     print 'Initializing checkins ...'
     # global checkins
     # checkins = {}
@@ -213,7 +211,7 @@ def init_checkins(filename):
                 continue
             cat_ids = []
             if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
-                cat_ids = search_venue_categories(lat, lon)
+                cat_ids = search_venue_categories(lat, lon, search_radius)
             users[uid].add_checkin(time, cat_ids)
             counter = counter + 1
             if counter % 100 == 0:
@@ -222,48 +220,79 @@ def init_checkins(filename):
             print 'Init checkins - Exception [counter = {0}]: ({1}) {2}'.format(counter, type(ex), ex)
 
 # Configuration
-def load_config(config_secret):
-    global client_id
-    global client_secret
+def load_config(config_file):
+    global USING_PARENT_CATEGORY, USING_CATEGORY, USING_CATEGORY_TIME, USING_CATEGORY_DAY, USING_CATEGORY_DAY_TIME, USING_TIME, USING_DAY_TIME
+    with open(config_file, 'r') as file:
+        json_str = file.read()
+        json_data = json.loads(json_str)
+        USING_PARENT_CATEGORY = json_data['USING_PARENT_CATEGORY']
+        USING_CATEGORY = json_data['USING_CATEGORY']
+        USING_CATEGORY_TIME = json_data['USING_CATEGORY_TIME']
+        USING_CATEGORY_DAY = json_data['USING_CATEGORY_DAY']
+        USING_CATEGORY_DAY_TIME = json_data['USING_CATEGORY_DAY_TIME']
+        USING_TIME = json_data['USING_TIME']
+        USING_DAY_TIME = json_data['USING_DAY_TIME']
+        search_radius = json_data['search_radius']
+        dataset = json_data['dataset']
+        f_output_folder = json_data['f_output_folder']
+        f_categories = json_data['f_categories']
+        f_users = json_data['f_users']
+        f_checkins = json_data['f_checkins']
+        f_friends = json_data['f_friends']
+        f_venues = json_data['f_venues']
+    return dataset, search_radius, f_output_folder, f_categories, f_users, f_checkins, f_friends, f_venues
+
+def load_secret(config_secret):
     with open(config_secret, 'r') as cred:
         json_str = cred.read()
         json_data = json.loads(json_str)
         client_id = json_data['client_id']
         client_secret = json_data['client_secret']
     print 'Configuration loaded'
+    return client_id, client_secret
 
-def init_folder():
+def init_config_folder(input_folder):
     if input_folder != '':
-        global f_config, f_categories, f_users, f_checkins, f_friends, f_venues, f_profile
-        f_config        = input_folder + '/' + f_config
-        f_categories    = input_folder + '/' + f_categories
-        f_users         = input_folder + '/' + f_users
-        f_checkins      = input_folder + '/' + f_checkins
-        f_friends       = input_folder + '/' + f_friends
-        f_venues        = input_folder + '/' + f_venues
-        f_profile       = input_folder + '/' + f_profile
+        f_config    = input_folder + '/' + f_config
+        f_secret    = input_folder + '/' + f_secret
+        return f_config, f_secret
+
+def init_files(input_folder, f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues):
+    global dataset
+    if input_folder != '':
+        input_folder += '/'
+    f_categories    = input_folder + f_categories
+    f_output_folder = input_folder + f_output_folder
+    f_users         = input_folder + dataset + '/' + f_users
+    f_checkins      = input_folder + dataset + '/' + f_checkins
+    f_friends       = input_folder + dataset + '/' + f_friends
+    f_venues        = input_folder + dataset + '/' + f_venues
+    return f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues
 
 # Main function
 if __name__ == '__main__':
     arglen = len(sys.argv)
     if arglen == 2:
         input_folder = sys.argv[1]
-        init_folder()
+        f_config, f_secret = init_config_folder(input_folder)
         print input_folder
     else :
         print 'No input folder provided, use <blank> as default'
     start_time = time.time()
+    ### Load configuration in json file
+    dataset, search_radius, f_output_folder, f_categories, f_users, f_checkins, f_friends, f_venues = load_config(f_config)
     ### Initialize foursquare API
-    load_config(f_config)  # Load config_secret.json for credential
-    client = auth_4sq()
+    client_id, client_secret = load_secret(f_secret)  # Load config_secret.json for credential
+    f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues = init_files(input_folder, f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues)
+    client = auth_4sq(client_id, client_secret)
     ### Initialize categories on 4sq
     init_categories(f_categories)
     ### Initialize users
     init_users(f_users)
     ### Assign check-ins
-    init_checkins(f_checkins)
+    init_checkins(f_checkins, search_radius)
 
-    make_sure_path_exists(f_profile)
+    make_sure_path_exists(f_output_folder)
 
     counter = 0
     for uid, user in users.iteritems():
@@ -278,17 +307,17 @@ if __name__ == '__main__':
             #print user.cat_dis
             # Categories
             if USING_CATEGORY:
-                f_out = '{0}/{1}_cat.txt'.format(f_profile, uid)
+                f_out = '{0}/{1}_cat.txt'.format(f_output_folder, uid)
                 result = re.sub('(\[)|(\])', '', str(user.cat_dis))
                 write_to_file(f_out, result, False)
             # Time slots
             if USING_TIME:
-                f_out = '{0}/{1}_time.txt'.format(f_profile, uid)
+                f_out = '{0}/{1}_time.txt'.format(f_output_folder, uid)
                 result = re.sub('(\[)|(\])', '', str(user.timeslots))
                 write_to_file(f_out, result, False)
             # Time slots
             if USING_DAY_TIME:
-                f_out = '{0}/{1}_alltime.txt'.format(f_profile, uid)
+                f_out = '{0}/{1}_alltime.txt'.format(f_output_folder, uid)
                 result = re.sub('(\[)|(\])', '', str(user.all_timeslots))
                 write_to_file(f_out, result, False)           
             # show_object_size(categories, 'categories')
