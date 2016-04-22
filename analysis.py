@@ -20,14 +20,22 @@ global f_config, f_categories, f_users, f_checkins, f_friends, f_venues, f_profi
 f_config = 'config_secret.json'
 f_categories = 'categories.csv'
 f_users = dataset + '/user.csv'
-f_checkins = dataset + '/checkin_small.csv'
+f_checkins = dataset + '/checkin_multiuser.csv'
 f_friends = dataset + '/friend.csv'
 f_venues = dataset + '/venue.csv'
 f_profile = 'users' # folder for each user profile
 
-search_area = 500 # in meters
+search_area = 50 # in meters
 category_parent = 1
 input_folder = ''
+
+USING_PARENT_CATEGORY = True
+USING_CATEGORY = False
+USING_CATEGORY_TIME = False
+USING_CATEGORY_DAY = False
+USING_CATEGORY_DAY_TIME = False
+USING_TIME = False
+USING_DAY_TIME = False
 
 # Global variables
 users = {}
@@ -36,16 +44,32 @@ cat_int = {}
 
 # Class and Functions
 class User:
-    cat_dis = []
     def __init__(self, _id):
-        self.id = _id
-        self.timeslots = []
-        self.init_categories = 0
-        self.total_cat_dis = 0
-        self.total_checkins = 0
+        self.id = _id               # User id
+        self.cat_dis = []           # 4sq categories
+        self.cat_dis_tod = []       # 4sq categories - time of day
+        self.cat_dis_dow = []       # 4sq categories - day of week
+        self.cat_dis_dow_tod = []   # 4sq categories - time of day + day of week
+        self.timeslots = []         # Time of day
+        self.all_timeslots = []     # Day of week + Time of day
+        self.init_categories = 0    # Flag on category initialization
+        self.total_cat_dis = 0      # number of distributions
+        self.total_checkins = 0     # number of checkins
+
         # Init timeslots
+        if USING_TIME:
+            self.init_time()
+        # Init all timeslots
+        if USING_DAY_TIME:
+            self.init_day_time()
+    def init_time(self):
         for i in range(0, 24):
             self.timeslots.append(0)
+    def init_day_time(self):
+        for i in range(0, 7):
+            self.all_timeslots.append([])
+            for j in range(0, 24):
+                self.all_timeslots[i].append(0)
     def init_cat_dis(self, num):
         for i in range(0, num):
             self.cat_dis.append(0)
@@ -53,28 +77,36 @@ class User:
     def increment_category(self, cid):
         self.cat_dis[cat_int[cid]] += 1
         self.total_cat_dis += 1
+    def increment_time(self, time, dtime):
+        if USING_TIME:
+            self.timeslots[time.hour] += 1
+        if USING_DAY_TIME:
+            self.all_timeslots[dtime.weekday()][time.hour] += 1
     def add_checkin(self, unixtime, cat_ids):
         self.total_checkins += 1
         # Deal with time slots
-        stime = datetime.fromtimestamp(unixtime)
+        if USING_TIME or USING_DAY_TIME:
+            time = datetime.fromtimestamp(unixtime)
+            dtime = date.fromtimestamp(unixtime)
+            self.increment_time(time, dtime)
         #print stime
         # Deal with categories
-        if self.init_categories == 0:
-            self.init_cat_dis(len(categories))
-        for cid in cat_ids:
-            self.increment_category(cid)
-            # Handle parent categories
-            cc = categories[cid]
-            level = cc.level
-            if category_parent == 1:
-                while level > 0 or cc is not None:
-                    cc = cc.parent
-                    if cc is None:
-                        break
-                    cid = cc.id
-                    self.increment_category(cid)
-                    level -= 1
-            pass
+        if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
+            if self.init_categories == 0:
+                self.init_cat_dis(len(categories))
+            for cid in cat_ids:
+                self.increment_category(cid)
+                # Handle parent categories
+                cc = categories[cid]
+                level = cc.level
+                if USING_PARENT_CATEGORY:
+                    while level > 0 or cc is not None:
+                        cc = cc.parent
+                        if cc is None:
+                            break
+                        cid = cc.id
+                        self.increment_category(cid)
+                        level -= 1
 
 class Category:
     def __init__(self, _id, _name, _parent, _level):
@@ -112,10 +144,10 @@ def auth_4sq():
     return client
 
 def search_venue_categories(lat, lon):
-    ll = str(lat) + ',' + str(lon)
-    b = client.venues.search(params={'ll': ll, 'radius':search_area})
-    venues = b['venues']
     cat_ids = []
+    ll = str(lat) + ',' + str(lon)
+    b = client.venues.search(params={'intent':'browse', 'll': ll, 'radius':search_area})
+    venues = b['venues']
     for v in venues:
         cats = v['categories']
         for cat in cats:
@@ -142,6 +174,7 @@ def init_categories(filename):
             if counter % 10000 == 0:
                 print 'Processing %d categories' % counter
     print 'Initialized {0} categories'.format(counter)
+    show_object_size(categories, 'categories')
 
 def init_users(filename):
     counter = 0
@@ -150,36 +183,43 @@ def init_users(filename):
             split = line.strip().split(',')
             _id = int(split[0])
             u = User(_id)
-            # u.init_cat_dis(len(cat_int))
+            #u.init_cat_dis(len(cat_int))
             users[_id] = u
             counter = counter + 1
             if counter % 10000 == 0:
                 print 'Processing %d users' % counter
     print 'Initialized {0} users'.format(counter)
+    show_object_size(users, 'users')
 
 def init_checkins(filename):
     print 'Initializing checkins ...'
     # global checkins
     # checkins = {}
     counter = 0
+    scheckins = []
     with open(filename, 'r') as fr:
         for line in fr:
-            try:
-                split = line.strip().split(',')
-                uid = int(split[0])
-                time = long(split[1])
-                lat = float(split[2])
-                lon = float(split[3])
-                if lat == 0.0 or lon == 0.0 :
-                    continue
+            scheckins.append(line)
+    print 'Initialized {0} checkins'.format(len(scheckins))
+    show_object_size(scheckins, 'scheckins')
+    for line in scheckins:
+        try:
+            split = line.strip().split(',')
+            uid = int(split[0])
+            time = long(split[1])
+            lat = float(split[2])
+            lon = float(split[3])
+            if lat == 0.0 or lon == 0.0 :
+                continue
+            cat_ids = []
+            if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
                 cat_ids = search_venue_categories(lat, lon)
-                users[uid].add_checkin(time, cat_ids)
-                counter = counter + 1
-                if counter % 1000 == 0:
-                    print '[{0}] Processing {1} checkins'.format(str(datetime.now()), counter)
-            except Exception as ex:
-                print 'Init checkins - Exception [counter = {0}]: {1}'.format(counter, ex)
-    print 'Initialized {0} checkins'.format(counter)
+            users[uid].add_checkin(time, cat_ids)
+            counter = counter + 1
+            if counter % 100 == 0:
+                print '[{0}] Processing {1} of {2} checkins ({3}%)'.format(str(datetime.now()), counter, len(scheckins), counter*100.0/len(scheckins))
+        except Exception as ex:
+            print 'Init checkins - Exception [counter = {0}]: ({1}) {2}'.format(counter, type(ex), ex)
 
 # Configuration
 def load_config(config_secret):
@@ -231,14 +271,27 @@ if __name__ == '__main__':
         if counter % 10000 == 0:
             print 'Processing %d users' % counter
         if user.total_cat_dis > 0:
-            f_out = '{0}/{1}.txt'.format(f_profile, uid)
-            result = re.sub('(\[)|(\])', '', str(user.cat_dis))
-            write_to_file(f_out, result, False)
             #print uid
+            print user.total_checkins
+            print user.total_cat_dis
             #print user.total_cat_dis
             #print user.cat_dis
-
-    # show_object_size(categories, 'categories')
-    # show_object_size(users, 'users')
+            # Categories
+            if USING_CATEGORY:
+                f_out = '{0}/{1}_cat.txt'.format(f_profile, uid)
+                result = re.sub('(\[)|(\])', '', str(user.cat_dis))
+                write_to_file(f_out, result, False)
+            # Time slots
+            if USING_TIME:
+                f_out = '{0}/{1}_time.txt'.format(f_profile, uid)
+                result = re.sub('(\[)|(\])', '', str(user.timeslots))
+                write_to_file(f_out, result, False)
+            # Time slots
+            if USING_DAY_TIME:
+                f_out = '{0}/{1}_alltime.txt'.format(f_profile, uid)
+                result = re.sub('(\[)|(\])', '', str(user.all_timeslots))
+                write_to_file(f_out, result, False)           
+            # show_object_size(categories, 'categories')
+            # show_object_size(user, 'user')
     
     print('Program finished in {0} seconds'.format(time.time() - start_time))
