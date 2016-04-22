@@ -12,6 +12,7 @@ import sys
 from pympler import asizeof
 from datetime import date
 from datetime import datetime
+import time
 
 # Setting variables
 dataset = 'brighkite'
@@ -19,7 +20,7 @@ global f_config, f_categories, f_users, f_checkins, f_friends, f_venues, f_profi
 f_config = 'config_secret.json'
 f_categories = 'categories.csv'
 f_users = dataset + '/user.csv'
-f_checkins = dataset + '/checkin_tiny.csv'
+f_checkins = dataset + '/checkin_small.csv'
 f_friends = dataset + '/friend.csv'
 f_venues = dataset + '/venue.csv'
 f_profile = 'users' # folder for each user profile
@@ -163,16 +164,21 @@ def init_checkins(filename):
     counter = 0
     with open(filename, 'r') as fr:
         for line in fr:
-            split = line.strip().split(',')
-            uid = int(split[0])
-            time = long(split[1])
-            lat = float(split[2])
-            lon = float(split[3])
-            cat_ids = search_venue_categories(lat, lon)
-            users[uid].add_checkin(time, cat_ids)
-            counter = counter + 1
-            if counter % 10000 == 0:
-                print 'Processing %d checkins' % counter
+            try:
+                split = line.strip().split(',')
+                uid = int(split[0])
+                time = long(split[1])
+                lat = float(split[2])
+                lon = float(split[3])
+                if lat == 0.0 or lon == 0.0 :
+                    continue
+                cat_ids = search_venue_categories(lat, lon)
+                users[uid].add_checkin(time, cat_ids)
+                counter = counter + 1
+                if counter % 1000 == 0:
+                    print '[{0}] Processing {1} checkins'.format(str(datetime.now()), counter)
+            except Exception as ex:
+                print 'Init checkins - Exception [counter = {0}]: {1}'.format(counter, ex)
     print 'Initialized {0} checkins'.format(counter)
 
 # Configuration
