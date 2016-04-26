@@ -1,6 +1,6 @@
 {
     "dataset":"brighkite",
-    "search_radius":50,
+    "search_radius":500,
     "USING_PARENT_CATEGORY":true,
     "USING_CATEGORY":true,
     "USING_CATEGORY_TIME":false,
@@ -12,7 +12,6 @@
     "f_users":"user.csv",
     "f_checkins":"checkin_multiuser.csv",
     "f_friends":"friend.csv",
-    "f_venues":"venue.csv",
-    "f_output_folder":"users",
-    "f_venue_locations":"venue_location.csv"
+    "f_venues":"venue_small.csv",
+    "f_output_folder":"output"
 }

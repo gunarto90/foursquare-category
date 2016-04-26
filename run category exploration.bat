@@ -1,2 +1,2 @@
-python analysis.py explore brighkite/venue.csv
+python analysis.py explore . venue_distribution.csv
 pause

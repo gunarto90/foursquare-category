@@ -17,28 +17,15 @@ import time
 # Setting variables
 f_config = 'config.json'
 f_secret = 'config_secret.json'
-# f_categories = 'categories.csv'
-# f_users = dataset + '/user.csv'
-# f_checkins = dataset + '/checkin_multiuser.csv'
-# f_friends = dataset + '/friend.csv'
-# f_venues = dataset + '/venue.csv'
-#f_profile = 'users' # folder for each user profile
 
 #search_area = 50 # in meters
 input_folder = ''
-
-# USING_PARENT_CATEGORY = True
-# USING_CATEGORY = True
-# USING_CATEGORY_TIME = False
-# USING_CATEGORY_DAY = False
-# USING_CATEGORY_DAY_TIME = False
-# USING_TIME = True
-# USING_DAY_TIME = True
 
 # Global variables
 users = {}
 categories = {}
 cat_int = {}
+venues = {}
 
 # Class and Functions
 class User:
@@ -112,11 +99,18 @@ class Category:
         self.name = _name
         self.parent = _parent # reference to Category instance
         self.level = _level
+        
+class Venue:
+    def __init__(self, _id, _count, _lat, _lon):
+        self.id = _id
+        self.count = _count
+        self.lat = _lat
+        self.lon = _lon
 
 # Utility functions
 def show_object_size(obj, name):
     size = asizeof.asizeof(obj)
-    print 'Size of {0} is : {1} Bytes'.format(name, size)
+    print 'Size of {0} is : {1:,} Bytes'.format(name, size)
 
 def make_sure_path_exists(path):
     try:
@@ -144,7 +138,7 @@ def auth_4sq(client_id, client_secret):
 def search_venue_categories(lat, lon, search_radius):
     cat_ids = []
     ll = str(lat) + ',' + str(lon)
-    b = client.venues.search(params={'intent':'browse', 'll': ll, 'radius':search_radius})
+    b = client.venues.search(params={'intent':'browse', 'll': ll, 'radius':search_radius, 'limit':50})
     venues = b['venues']
     for v in venues:
         cats = v['categories']
@@ -152,6 +146,34 @@ def search_venue_categories(lat, lon, search_radius):
             cat_id = cat['id']
             cat_ids.append(cat_id)
     return cat_ids
+    
+def process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING_CATEGORY_DAY, USING_CATEGORY_TIME, USING_CATEGORY_DAY_TIME):
+    category_distribution = []
+    # Deal with categories
+    if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
+        count_assign = 0
+        for i in range(0, len(categories)):
+            category_distribution.append(0)
+        for cid in cat_ids:
+            count_assign += 1
+            category_distribution[cat_int[cid]] += 1
+            # Handle parent categories
+            cc = categories[cid]
+            level = cc.level
+            if USING_PARENT_CATEGORY:
+                while level > 0 or cc is not None:
+                    cc = cc.parent
+                    if cc is None:
+                        break
+                    count_assign += 1
+                    category_distribution[cat_int[cc.id]] += 1
+                    level -= 1
+        # Normalize category_distribution
+        if count_assign > 0:
+            for i in range(0, len(category_distribution)):
+                x = float(category_distribution[i]) / count_assign
+                category_distribution[i] = x
+    return category_distribution
 
 # Init functions
 def init_categories(filename):
@@ -173,6 +195,22 @@ def init_categories(filename):
                 print 'Processing %d categories' % counter
     print 'Initialized {0} categories'.format(counter)
     show_object_size(categories, 'categories')
+    
+def init_venues(filename):
+    counter = 0
+    with open(filename, 'r') as fr:
+        for line in fr:
+            split = line.strip().split(',')
+            _id = int(split[0])
+            _count = int(split[1])
+            _lat = float(split[2])
+            _lon = float(split[3])
+            venues[_id] = Venue(_id, _count, _lat, _lon)
+            counter = counter + 1
+            if counter % 10000 == 0:
+                print 'Processing %d venues' % counter
+    print 'Initialized {0} venues'.format(counter)
+    show_object_size(venues, 'venues')
 
 def init_users(filename):
     counter = 0
@@ -251,7 +289,7 @@ def load_secret(config_secret):
     print 'Configuration loaded'
     return client_id, client_secret
 
-def init_config_folder(input_folder):
+def init_config_folder(input_folder, f_config, f_secret):
     if input_folder != '':
         f_config    = input_folder + '/' + f_config
         f_secret    = input_folder + '/' + f_secret
@@ -261,23 +299,28 @@ def init_files(input_folder, f_categories, f_output_folder, f_users, f_checkins,
     global dataset
     if input_folder != '':
         input_folder += '/'
-    f_categories    = input_folder + f_categories
-    f_output_folder = input_folder + f_output_folder
-    f_users         = input_folder + dataset + '/' + f_users
-    f_checkins      = input_folder + dataset + '/' + f_checkins
-    f_friends       = input_folder + dataset + '/' + f_friends
-    f_venues        = input_folder + dataset + '/' + f_venues
+    f_categories        = input_folder + f_categories
+    f_output_folder     = input_folder + f_output_folder
+    f_users             = input_folder + dataset + '/' + f_users
+    f_checkins          = input_folder + dataset + '/' + f_checkins
+    f_friends           = input_folder + dataset + '/' + f_friends
+    f_venues            = input_folder + dataset + '/' + f_venues
     return f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues
 
 # Main function
 if __name__ == '__main__':
     arglen = len(sys.argv)
-    if arglen == 2:
-        input_folder = sys.argv[1]
-        f_config, f_secret = init_config_folder(input_folder)
-        print input_folder
+    MODE_OPTS = ['explore', 'analyze']
+    if arglen > 1:
+        MODE = sys.argv[1]
+        input_folder = sys.argv[2]
+        if MODE == MODE_OPTS[0]:
+            output_venue_dis = sys.argv[3]
+        f_config, f_secret = init_config_folder(input_folder, f_config, f_secret)
+        print 'Working directory: %s' % input_folder
     else :
-        print 'No input folder provided, use <blank> as default'
+        print 'Please use these parameters to run the program : python analysis.py <MODE> <Input Folder> <Other parameters>'
+        exit(0)
     start_time = time.time()
     ### Load configuration in json file
     dataset, search_radius, f_output_folder, f_categories, f_users, f_checkins, f_friends, f_venues = load_config(f_config)
@@ -287,40 +330,75 @@ if __name__ == '__main__':
     client = auth_4sq(client_id, client_secret)
     ### Initialize categories on 4sq
     init_categories(f_categories)
+    ### Initialize venues
+    if MODE == MODE_OPTS[0]:
+        init_venues(f_venues)
     ### Initialize users
-    init_users(f_users)
+    if MODE == MODE_OPTS[1]:
+        init_users(f_users)
     ### Assign check-ins
-    init_checkins(f_checkins, search_radius)
+    if MODE == MODE_OPTS[1]:
+        init_checkins(f_checkins, search_radius)
 
     make_sure_path_exists(f_output_folder)
 
     counter = 0
-    for uid, user in users.iteritems():
-        counter += 1
-        if counter % 10000 == 0:
-            print 'Processing %d users' % counter
-        if user.total_cat_dis > 0:
-            #print uid
-            print user.total_checkins
-            print user.total_cat_dis
-            #print user.total_cat_dis
-            #print user.cat_dis
-            # Categories
-            if USING_CATEGORY:
-                f_out = '{0}/{1}_cat.txt'.format(f_output_folder, uid)
-                result = re.sub('(\[)|(\])', '', str(user.cat_dis))
-                write_to_file(f_out, result, False)
-            # Time slots
-            if USING_TIME:
-                f_out = '{0}/{1}_time.txt'.format(f_output_folder, uid)
-                result = re.sub('(\[)|(\])', '', str(user.timeslots))
-                write_to_file(f_out, result, False)
-            # Time slots
-            if USING_DAY_TIME:
-                f_out = '{0}/{1}_alltime.txt'.format(f_output_folder, uid)
-                result = re.sub('(\[)|(\])', '', str(user.all_timeslots))
-                write_to_file(f_out, result, False)           
-            # show_object_size(categories, 'categories')
-            # show_object_size(user, 'user')
+    if MODE == MODE_OPTS[0]:
+        if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
+            try:
+                os.remove(output_venue_dis)
+            except:
+                pass
+            query_time = time.time()
+            str_out = ''
+            for vid, venue in venues.iteritems():
+                counter += 1
+                if counter % 2500 == 0:
+                    print 'Processing {0} venues in {1} seconds'.format(counter)
+                    wait_time = 3600 - int(time.time() - query_time) + 1
+                    print wait_time
+                    #sleep(wait_time)
+                try:
+                    cat_ids = search_venue_categories(venue.lat, venue.lon, search_radius)
+                    category_distribution = process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING_CATEGORY_DAY, USING_CATEGORY_TIME, USING_CATEGORY_DAY_TIME)
+                    # Handle outputs
+                    # print category_distribution
+                    cats = ','.join(str(x) for x in category_distribution)
+                    str_out += '{0},{1}\n'.format(vid , cats)
+                    if counter % 50 == 0:
+                        with open(f_output_folder + '/' + output_venue_dis, 'a') as fout:
+                            fout.write(str_out)
+                        str_out = ''
+                except Exception as ex:
+                    print ex
+                
+    elif MODE == MODE_OPTS[1]:
+        for uid, user in users.iteritems():
+            counter += 1
+            if counter % 10000 == 0:
+                print 'Processing %d users' % counter
+            if user.total_cat_dis > 0:
+                #print uid
+                #print user.total_checkins
+                #print user.total_cat_dis
+                #print user.total_cat_dis
+                #print user.cat_dis
+                # Categories
+                if USING_CATEGORY:
+                    f_out = '{0}/{1}_cat.txt'.format(f_output_folder, uid)
+                    result = re.sub('(\[)|(\])', '', str(user.cat_dis))
+                    write_to_file(f_out, result, False)
+                # Time slots
+                if USING_TIME:
+                    f_out = '{0}/{1}_time.txt'.format(f_output_folder, uid)
+                    result = re.sub('(\[)|(\])', '', str(user.timeslots))
+                    write_to_file(f_out, result, False)
+                # Time slots
+                if USING_DAY_TIME:
+                    f_out = '{0}/{1}_alltime.txt'.format(f_output_folder, uid)
+                    result = re.sub('(\[)|(\])', '', str(user.all_timeslots))
+                    write_to_file(f_out, result, False)           
+                # show_object_size(categories, 'categories')
+                # show_object_size(user, 'user')
     
     print('Program finished in {0} seconds'.format(time.time() - start_time))
