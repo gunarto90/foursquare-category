@@ -1,0 +1,2 @@
+python category_extract.py
+pause
