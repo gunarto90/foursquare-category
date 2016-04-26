@@ -346,32 +346,40 @@ if __name__ == '__main__':
     if MODE == MODE_OPTS[0]:
         if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
             try:
-                os.remove(output_venue_dis)
+                os.remove(f_output_folder + '/' + output_venue_dis)
             except:
                 pass
             query_time = time.time()
             str_out = ''
             for vid, venue in venues.iteritems():
                 counter += 1
-                if counter % 2500 == 0:
-                    print 'Processing {0} venues in {1} seconds'.format(counter)
-                    wait_time = 3600 - int(time.time() - query_time) + 1
-                    print wait_time
-                    #sleep(wait_time)
+                if counter % 5000 == 0:
+                    process_time = int(time.time() - query_time)
+                    print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
+                    wait_time = 3600 - process_time + 1
+                    print 'Need to wait %d seconds ... ' % wait_time
+                    sleep(wait_time)
+                    print 'Continue querying ...'
                 try:
-                    cat_ids = search_venue_categories(venue.lat, venue.lon, search_radius)
-                    category_distribution = process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING_CATEGORY_DAY, USING_CATEGORY_TIME, USING_CATEGORY_DAY_TIME)
-                    # Handle outputs
-                    # print category_distribution
-                    cats = ','.join(str(x) for x in category_distribution)
-                    str_out += '{0},{1}\n'.format(vid , cats)
+                    if venue.count > 0:
+                        cat_ids = search_venue_categories(venue.lat, venue.lon, search_radius)
+                        category_distribution = process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING_CATEGORY_DAY, USING_CATEGORY_TIME, USING_CATEGORY_DAY_TIME)
+                        # Handle outputs
+                        # print category_distribution
+                        cats = ','.join(str(x) for x in category_distribution)
+                        str_out += '{0},{1}\n'.format(vid , cats)
                     if counter % 50 == 0:
                         with open(f_output_folder + '/' + output_venue_dis, 'a') as fout:
                             fout.write(str_out)
                         str_out = ''
+                        process_time = int(time.time() - query_time)
+                        print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
                 except Exception as ex:
                     print ex
-                
+            # Write remaining output
+            if str_out != '':
+                with open(f_output_folder + '/' + output_venue_dis, 'a') as fout:
+                    fout.write(str_out)
     elif MODE == MODE_OPTS[1]:
         for uid, user in users.iteritems():
             counter += 1
