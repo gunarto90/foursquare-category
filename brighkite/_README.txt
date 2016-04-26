@@ -32,8 +32,8 @@ user id, row uid, #checkins, rank #checkins, #friends, rank #friends
 venue id, visited frequency, popularity (visit frequency/max visit frequency), weight popularity (1-popularity)
 - venue id : integer
 - visited frequency : integer
-- popularity : float
-- weight popularity : float
+- latitude: float
+- longitude: float
 
 ### Statistics:
 #Users: 58,228
