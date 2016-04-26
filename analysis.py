@@ -138,13 +138,21 @@ def auth_4sq(client_id, client_secret):
 def search_venue_categories(lat, lon, search_radius):
     cat_ids = []
     ll = str(lat) + ',' + str(lon)
-    b = client.venues.search(params={'intent':'browse', 'll': ll, 'radius':search_radius, 'limit':50})
-    venues = b['venues']
-    for v in venues:
-        cats = v['categories']
-        for cat in cats:
-            cat_id = cat['id']
-            cat_ids.append(cat_id)
+    try:
+        b = client.venues.search(params={'intent':'browse', 'll': ll, 'radius':search_radius, 'limit':50})
+        venues = b['venues']
+        for v in venues:
+            cats = v['categories']
+            for cat in cats:
+                cat_id = cat['id']
+                cat_ids.append(cat_id)
+    except Exception as ex:
+        print 'Search Venue Categories Exception : {0}'.format(ex)
+        with open('error.log', 'a') as fout:
+            fout.write('Search Venue Categories Exception : {0}'.format(ex))
+        print 'Let the program sleep for 10 minutes'
+        time.sleep(600) # Delay 10 minutes for another crawler
+        return None
     return cat_ids
     
 def process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING_CATEGORY_DAY, USING_CATEGORY_TIME, USING_CATEGORY_DAY_TIME):
@@ -238,7 +246,8 @@ def init_checkins(filename, search_radius):
             scheckins.append(line)
     print 'Initialized {0} checkins'.format(len(scheckins))
     show_object_size(scheckins, 'scheckins')
-    for line in scheckins:
+    while counter < len(scheckins):
+        line = scheckins[counter]
         try:
             split = line.strip().split(',')
             uid = int(split[0])
@@ -250,6 +259,8 @@ def init_checkins(filename, search_radius):
             cat_ids = []
             if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
                 cat_ids = search_venue_categories(lat, lon, search_radius)
+            if cat_ids == None:
+                continue
             users[uid].add_checkin(time, cat_ids)
             counter = counter + 1
             if counter % 100 == 0:
@@ -353,16 +364,22 @@ if __name__ == '__main__':
             str_out = ''
             for vid, venue in venues.iteritems():
                 counter += 1
-                if counter % 5000 == 0:
+                if counter % 4500 == 0: # 5000 is the limit
                     process_time = int(time.time() - query_time)
                     print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
                     wait_time = 3600 - process_time + 1
-                    print 'Need to wait %d seconds ... ' % wait_time
-                    sleep(wait_time)
-                    print 'Continue querying ...'
+                    if wait_time > 0:
+                        print 'Need to wait %d seconds ... ' % wait_time
+                        time.sleep(wait_time)
+                        print 'Continue querying ...'
                 try:
                     if venue.count > 0:
-                        cat_ids = search_venue_categories(venue.lat, venue.lon, search_radius)
+                        cat_ids = None
+                        while cat_ids == None:
+                            cat_ids = search_venue_categories(venue.lat, venue.lon, search_radius)
+                            if cat_ids == None:
+                                process_time = int(time.time() - query_time)
+                                print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
                         category_distribution = process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING_CATEGORY_DAY, USING_CATEGORY_TIME, USING_CATEGORY_DAY_TIME)
                         # Handle outputs
                         # print category_distribution

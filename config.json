@@ -12,6 +12,6 @@
     "f_users":"user.csv",
     "f_checkins":"checkin_multiuser.csv",
     "f_friends":"friend.csv",
-    "f_venues":"venue_small.csv",
+    "f_venues":"venue.csv",
     "f_output_folder":"output"
 }
