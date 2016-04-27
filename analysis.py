@@ -149,10 +149,11 @@ def search_venue_categories(lat, lon, search_radius):
     except Exception as ex:
         print 'Search Venue Categories Exception : {0}'.format(ex)
         with open('error.log', 'a') as fout:
-            fout.write('Search Venue Categories Exception : {0}'.format(ex))
-        print 'Let the program sleep for 10 minutes'
-        time.sleep(600) # Delay 10 minutes for another crawler
-        return None
+            fout.write('Search Venue Categories Exception : {0}\n'.format(ex))
+        if str(ex) == 'Quota exceeded':
+            print 'Let the program sleep for 10 minutes'
+            time.sleep(600) # Delay 10 minutes for another crawler
+            return None
     return cat_ids
     
 def process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING_CATEGORY_DAY, USING_CATEGORY_TIME, USING_CATEGORY_DAY_TIME):
