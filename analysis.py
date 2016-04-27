@@ -368,11 +368,11 @@ if __name__ == '__main__':
                 if counter % 4500 == 0: # 5000 is the limit
                     process_time = int(time.time() - query_time)
                     print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
-                    wait_time = 3600 - process_time + 1
-                    if wait_time > 0:
-                        print 'Need to wait %d seconds ... ' % wait_time
-                        time.sleep(wait_time)
-                        print 'Continue querying ...'
+                    #wait_time = 3600 - process_time + 1
+                    #if wait_time > 0:
+                    #    print 'Need to wait %d seconds ... ' % wait_time
+                    #    time.sleep(wait_time)
+                    #    print 'Continue querying ...'
                 try:
                     if venue.count > 0:
                         cat_ids = None
