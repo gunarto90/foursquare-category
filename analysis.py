@@ -386,12 +386,12 @@ if __name__ == '__main__':
                         # print category_distribution
                         cats = ','.join(str(x) for x in category_distribution)
                         str_out += '{0},{1}\n'.format(vid , cats)
-                    if counter % 50 == 0:
+                    if counter % 10 == 0:
                         with open(f_output_folder + '/' + output_venue_dis, 'a') as fout:
                             fout.write(str_out)
                         str_out = ''
                         process_time = int(time.time() - query_time)
-                        print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
+                        print '[{0}] Processing {1} venues in {2} seconds ({3:.2f}% completed)'.format(str(datetime.now()), counter, process_time, float(counter*100.0/len(venues)))
                 except Exception as ex:
                     print ex
             # Write remaining output
