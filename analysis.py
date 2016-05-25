@@ -208,7 +208,7 @@ def init_categories(filename):
             categories[_id] = Category(_id, _name, parent, _level)
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print '[{0}] Processing {1} categories'.format(str(datetime.now(), counter)
+                print '[{0}] Processing {1} categories'.format(str(datetime.now()), counter)
     process_time = int(time.time() - query_time)
     print 'Processing {0} categories in {1} seconds'.format(counter, process_time)
     show_object_size(categories, 'categories')
@@ -226,7 +226,7 @@ def init_venues(filename):
             venues[_id] = Venue(_id, _count, _lat, _lon)
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print '[{0}] Processing {1} venues'.format(str(datetime.now(), counter)
+                print '[{0}] Processing {1} venues'.format(str(datetime.now()), counter)
     process_time = int(time.time() - query_time)
     print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
     show_object_size(venues, 'venues')
@@ -243,7 +243,7 @@ def init_users(filename):
             users[_id] = u
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print '[{0}] Processing {1} users'.format(str(datetime.now(), counter)
+                print '[{0}] Processing {1} users'.format(str(datetime.now()), counter)
     process_time = int(time.time() - query_time)
     print 'Processing {0} users in {1} seconds'.format(counter, process_time)
     show_object_size(users, 'users')
@@ -259,7 +259,6 @@ def init_checkins(filename, search_radius):
         for line in fr:
             scheckins.append(line)
     process_time = int(time.time() - query_time)
-    print 'Processing {0} checkins in {1} seconds'.format(len(scheckins), process_time)
     show_object_size(scheckins, 'scheckins')
     while counter < len(scheckins):
         line = scheckins[counter]
@@ -284,6 +283,7 @@ def init_checkins(filename, search_radius):
                 print '[{0}] Processing {1} of {2} checkins ({3}%)'.format(str(datetime.now()), counter, len(scheckins), counter*100.0/len(scheckins))
         except Exception as ex:
             print 'Init checkins - Exception [counter = {0}]: ({1}) {2}'.format(counter, type(ex), ex)
+    print 'Processing {0} checkins in {1} seconds'.format(len(scheckins), process_time)
 
 def init_venue_categories(f_venue, f_distribution):
     print f_venue
@@ -303,7 +303,7 @@ def init_venue_categories(f_venue, f_distribution):
             #venueCategories[_vid] = vc
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print 'Processing %d venue categories' % counter
+                print '[{0}] Processing {1} venue categories'.format(str(datetime.now()), counter)
     process_time = int(time.time() - query_time)
     print 'Processing {0} venue categories in {1} seconds'.format(counter, process_time)
     show_object_size(venueCategories, 'venueCategories')
@@ -447,7 +447,7 @@ if __name__ == '__main__':
         for uid, user in users.iteritems():
             counter += 1
             if counter % 10000 == 0:
-                print 'Processing %d users' % counter
+                print '{} Processing {} users'.format(str(datetime.now()), counter)
             if user.total_cat_dis > 0:
                 #print uid
                 #print user.total_checkins
