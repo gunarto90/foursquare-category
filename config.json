@@ -3,9 +3,9 @@
     "search_radius":500,
     "USING_PARENT_CATEGORY":true,
     "USING_CATEGORY":true,
-    "USING_CATEGORY_TIME":false,
-    "USING_CATEGORY_DAY":false,
-    "USING_CATEGORY_DAY_TIME":false,
+    "USING_CATEGORY_TIME":true,
+    "USING_CATEGORY_DAY":true,
+    "USING_CATEGORY_DAY_TIME":true,
     "USING_TIME":true,
     "USING_DAY_TIME":true,
     "f_categories":"categories.csv",
@@ -13,5 +13,6 @@
     "f_checkins":"checkin_multiuser.csv",
     "f_friends":"friend.csv",
     "f_venues":"venue.csv",
-    "f_output_folder":"output"
+    "f_output_folder":"output",
+    "f_distribution":"categories/parent/"
 }

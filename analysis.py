@@ -12,7 +12,6 @@ import sys
 from pympler import asizeof
 from datetime import date
 from datetime import datetime
-import time
 
 # Setting variables
 f_config = 'config.json'
@@ -106,6 +105,13 @@ class Venue:
         self.count = _count
         self.lat = _lat
         self.lon = _lon
+        
+class VenueCategory:
+    def __init__(self, _vid, _cat):
+        self.vid = _vid
+        self.cat = _cat
+
+COUNTER_SEPARATOR = 10000
 
 # Utility functions
 def show_object_size(obj, name):
@@ -187,6 +193,7 @@ def process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING
 # Init functions
 def init_categories(filename):
     counter = 0
+    query_time = time.time()
     with open(filename, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
@@ -200,13 +207,15 @@ def init_categories(filename):
                 parent = categories[_parent_id]
             categories[_id] = Category(_id, _name, parent, _level)
             counter = counter + 1
-            if counter % 10000 == 0:
-                print 'Processing %d categories' % counter
-    print 'Initialized {0} categories'.format(counter)
+            if counter % COUNTER_SEPARATOR == 0:
+                print '[{0}] Processing {1} categories'.format(str(datetime.now(), counter)
+    process_time = int(time.time() - query_time)
+    print 'Processing {0} categories in {1} seconds'.format(counter, process_time)
     show_object_size(categories, 'categories')
     
 def init_venues(filename):
     counter = 0
+    query_time = time.time()
     with open(filename, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
@@ -216,13 +225,15 @@ def init_venues(filename):
             _lon = float(split[3])
             venues[_id] = Venue(_id, _count, _lat, _lon)
             counter = counter + 1
-            if counter % 10000 == 0:
-                print 'Processing %d venues' % counter
-    print 'Initialized {0} venues'.format(counter)
+            if counter % COUNTER_SEPARATOR == 0:
+                print '[{0}] Processing {1} venues'.format(str(datetime.now(), counter)
+    process_time = int(time.time() - query_time)
+    print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
     show_object_size(venues, 'venues')
 
 def init_users(filename):
     counter = 0
+    query_time = time.time()
     with open(filename, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
@@ -231,13 +242,15 @@ def init_users(filename):
             #u.init_cat_dis(len(cat_int))
             users[_id] = u
             counter = counter + 1
-            if counter % 10000 == 0:
-                print 'Processing %d users' % counter
-    print 'Initialized {0} users'.format(counter)
+            if counter % COUNTER_SEPARATOR == 0:
+                print '[{0}] Processing {1} users'.format(str(datetime.now(), counter)
+    process_time = int(time.time() - query_time)
+    print 'Processing {0} users in {1} seconds'.format(counter, process_time)
     show_object_size(users, 'users')
 
 def init_checkins(filename, search_radius):
     print 'Initializing checkins ...'
+    query_time = time.time()
     # global checkins
     # checkins = {}
     counter = 0
@@ -245,29 +258,56 @@ def init_checkins(filename, search_radius):
     with open(filename, 'r') as fr:
         for line in fr:
             scheckins.append(line)
-    print 'Initialized {0} checkins'.format(len(scheckins))
+    process_time = int(time.time() - query_time)
+    print 'Processing {0} checkins in {1} seconds'.format(len(scheckins), process_time)
     show_object_size(scheckins, 'scheckins')
     while counter < len(scheckins):
         line = scheckins[counter]
         try:
             split = line.strip().split(',')
             uid = int(split[0])
-            time = long(split[1])
+            timestamp = long(split[1])
             lat = float(split[2])
             lon = float(split[3])
+            vid = int(split[4])
             if lat == 0.0 or lon == 0.0 :
                 continue
             cat_ids = []
-            if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
-                cat_ids = search_venue_categories(lat, lon, search_radius)
+            #if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
+            #    cat_ids = search_venue_categories(lat, lon, search_radius)
+            # USE VENUE ID TO QUERY CATEGORIES --> BUT FIRST INIT THE CATEGORIES
             if cat_ids == None:
                 continue
-            users[uid].add_checkin(time, cat_ids)
+            users[uid].add_checkin(timestamp, cat_ids)
             counter = counter + 1
             if counter % 100 == 0:
                 print '[{0}] Processing {1} of {2} checkins ({3}%)'.format(str(datetime.now()), counter, len(scheckins), counter*100.0/len(scheckins))
         except Exception as ex:
             print 'Init checkins - Exception [counter = {0}]: ({1}) {2}'.format(counter, type(ex), ex)
+
+def init_venue_categories(f_venue, f_distribution):
+    print f_venue
+    print f_distribution
+    query_time = time.time()
+    counter = 0
+    venueCategories = {}
+    with open(f_distribution, 'r') as fr:
+        for line in fr:
+            #split = line.strip().split(',')
+            #_vid = int(split[0])
+            #num = len(split)
+            #cat = []
+            #for i in range(1, num):
+            #    cat.append(split[i])
+            #vc = VenueCategory(_vid, cat)
+            #venueCategories[_vid] = vc
+            counter = counter + 1
+            if counter % COUNTER_SEPARATOR == 0:
+                print 'Processing %d venue categories' % counter
+    process_time = int(time.time() - query_time)
+    print 'Processing {0} venue categories in {1} seconds'.format(counter, process_time)
+    show_object_size(venueCategories, 'venueCategories')
+
 
 # Configuration
 def load_config(config_file):
@@ -290,7 +330,8 @@ def load_config(config_file):
         f_checkins = json_data['f_checkins']
         f_friends = json_data['f_friends']
         f_venues = json_data['f_venues']
-    return dataset, search_radius, f_output_folder, f_categories, f_users, f_checkins, f_friends, f_venues
+        f_distribution = json_data['f_distribution']
+    return dataset, search_radius, f_output_folder, f_categories, f_users, f_checkins, f_friends, f_venues, f_distribution
 
 def load_secret(config_secret):
     with open(config_secret, 'r') as cred:
@@ -307,7 +348,7 @@ def init_config_folder(input_folder, f_config, f_secret):
         f_secret    = input_folder + '/' + f_secret
         return f_config, f_secret
 
-def init_files(input_folder, f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues):
+def init_files(input_folder, f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues, f_distribution):
     global dataset
     if input_folder != '':
         input_folder += '/'
@@ -317,8 +358,9 @@ def init_files(input_folder, f_categories, f_output_folder, f_users, f_checkins,
     f_checkins          = input_folder + dataset + '/' + f_checkins
     f_friends           = input_folder + dataset + '/' + f_friends
     f_venues            = input_folder + dataset + '/' + f_venues
-    return f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues
-
+    f_distribution      = input_folder + f_distribution + dataset + '.csv'
+    return f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues, f_distribution
+    
 # Main function
 if __name__ == '__main__':
     arglen = len(sys.argv)
@@ -335,16 +377,19 @@ if __name__ == '__main__':
         exit(0)
     start_time = time.time()
     ### Load configuration in json file
-    dataset, search_radius, f_output_folder, f_categories, f_users, f_checkins, f_friends, f_venues = load_config(f_config)
+    dataset, search_radius, f_output_folder, f_categories, f_users, f_checkins, f_friends, f_venues, f_distribution = load_config(f_config)
     ### Initialize foursquare API
     client_id, client_secret = load_secret(f_secret)  # Load config_secret.json for credential
-    f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues = init_files(input_folder, f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues)
-    client = auth_4sq(client_id, client_secret)
+    f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues, f_distribution = init_files(input_folder, f_categories, f_output_folder, f_users, f_checkins, f_friends, f_venues, f_distribution)
+    if MODE == MODE_OPTS[0]:
+        client = auth_4sq(client_id, client_secret)
     ### Initialize categories on 4sq
     init_categories(f_categories)
     ### Initialize venues
     if MODE == MODE_OPTS[0]:
         init_venues(f_venues)
+    if MODE == MODE_OPTS[1]:
+        init_venue_categories(f_venues, f_distribution)
     ### Initialize users
     if MODE == MODE_OPTS[1]:
         init_users(f_users)
@@ -412,16 +457,19 @@ if __name__ == '__main__':
                 # Categories
                 if USING_CATEGORY:
                     f_out = '{0}/{1}_cat.txt'.format(f_output_folder, uid)
+                    print f_out
                     result = re.sub('(\[)|(\])', '', str(user.cat_dis))
                     write_to_file(f_out, result, False)
                 # Time slots
                 if USING_TIME:
                     f_out = '{0}/{1}_time.txt'.format(f_output_folder, uid)
+                    print f_out
                     result = re.sub('(\[)|(\])', '', str(user.timeslots))
                     write_to_file(f_out, result, False)
                 # Time slots
                 if USING_DAY_TIME:
                     f_out = '{0}/{1}_alltime.txt'.format(f_output_folder, uid)
+                    print f_out
                     result = re.sub('(\[)|(\])', '', str(user.all_timeslots))
                     write_to_file(f_out, result, False)           
                 # show_object_size(categories, 'categories')
