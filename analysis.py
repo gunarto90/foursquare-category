@@ -26,6 +26,8 @@ categories = {}
 cat_int = {}
 venues = {}
 
+
+
 # Class and Functions
 class User:
     def __init__(self, _id):
@@ -186,7 +188,7 @@ def process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING
         # Normalize category_distribution
         if count_assign > 0:
             for i in range(0, len(category_distribution)):
-                x = float(category_distribution[i]) / count_assign
+                x = abs(float(category_distribution[i]) / count_assign)
                 category_distribution[i] = x
     return category_distribution
 
@@ -291,23 +293,23 @@ def init_venue_categories(f_venue, f_distribution):
     query_time = time.time()
     counter = 0
     venueCategories = {}
+    ### USE SEVERAL CHUNKS of FILES -- separate by 100000 for example
+    ### FOR checkins, it also needs to be sorted by venue id, so we can fetch first 100000 categories and fetch next if needed
     with open(f_distribution, 'r') as fr:
         for line in fr:
-            #split = line.strip().split(',')
-            #_vid = int(split[0])
-            #num = len(split)
-            #cat = []
-            #for i in range(1, num):
-            #    cat.append(split[i])
-            #vc = VenueCategory(_vid, cat)
-            #venueCategories[_vid] = vc
+            split = line.strip().split(',')
+            _vid = int(split[0])
+            cat = []
+            for i in range(1, len(split)):
+                cat.append(split[i])
+            vc = VenueCategory(_vid, cat)
+            venueCategories[_vid] = vc
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
                 print '[{0}] Processing {1} venue categories'.format(str(datetime.now()), counter)
     process_time = int(time.time() - query_time)
     print 'Processing {0} venue categories in {1} seconds'.format(counter, process_time)
     show_object_size(venueCategories, 'venueCategories')
-
 
 # Configuration
 def load_config(config_file):
