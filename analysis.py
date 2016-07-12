@@ -75,7 +75,7 @@ class User:
             time = datetime.fromtimestamp(unixtime)
             dtime = date.fromtimestamp(unixtime)
             self.increment_time(time, dtime)
-        #print stime
+        #print(stime)
         # Deal with categories
         if USING_CATEGORY or USING_CATEGORY_DAY or USING_CATEGORY_TIME or USING_CATEGORY_DAY_TIME:
             if self.init_categories == 0:
@@ -118,7 +118,7 @@ COUNTER_SEPARATOR = 10000
 # Utility functions
 def show_object_size(obj, name):
     size = asizeof.asizeof(obj)
-    print 'Size of {0} is : {1:,} Bytes'.format(name, size)
+    print('Size of {0} is : {1:,} Bytes'.format(name, size))
 
 def make_sure_path_exists(path):
     try:
@@ -155,11 +155,11 @@ def search_venue_categories(lat, lon, search_radius):
                 cat_id = cat['id']
                 cat_ids.append(cat_id)
     except Exception as ex:
-        print 'Search Venue Categories Exception : {0}'.format(ex)
+        print('Search Venue Categories Exception : {0}'.format(ex))
         with open('error.log', 'a') as fout:
             fout.write('Search Venue Categories Exception : {0}\n'.format(ex))
         if str(ex) == 'Quota exceeded':
-            print 'Let the program sleep for 10 minutes'
+            print('Let the program sleep for 10 minutes')
             time.sleep(600) # Delay 10 minutes for another crawler
             return None
     return cat_ids
@@ -210,9 +210,9 @@ def init_categories(filename):
             categories[_id] = Category(_id, _name, parent, _level)
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print '[{0}] Processing {1} categories'.format(str(datetime.now()), counter)
+                print('[{0}] Processing {1} categories'.format(str(datetime.now()), counter))
     process_time = int(time.time() - query_time)
-    print 'Processing {0} categories in {1} seconds'.format(counter, process_time)
+    print('Processing {0} categories in {1} seconds'.format(counter, process_time))
     show_object_size(categories, 'categories')
     
 def init_venues(filename):
@@ -228,9 +228,9 @@ def init_venues(filename):
             venues[_id] = Venue(_id, _count, _lat, _lon)
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print '[{0}] Processing {1} venues'.format(str(datetime.now()), counter)
+                print('[{0}] Processing {1} venues'.format(str(datetime.now()), counter))
     process_time = int(time.time() - query_time)
-    print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
+    print('Processing {0} venues in {1} seconds'.format(counter, process_time))
     show_object_size(venues, 'venues')
 
 def init_users(filename):
@@ -245,13 +245,13 @@ def init_users(filename):
             users[_id] = u
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print '[{0}] Processing {1} users'.format(str(datetime.now()), counter)
+                print('[{0}] Processing {1} users'.format(str(datetime.now()), counter))
     process_time = int(time.time() - query_time)
-    print 'Processing {0} users in {1} seconds'.format(counter, process_time)
+    print('Processing {0} users in {1} seconds'.format(counter, process_time))
     show_object_size(users, 'users')
 
 def init_checkins(filename, search_radius):
-    print 'Initializing checkins ...'
+    print('Initializing checkins ...')
     query_time = time.time()
     # global checkins
     # checkins = {}
@@ -282,14 +282,14 @@ def init_checkins(filename, search_radius):
             users[uid].add_checkin(timestamp, cat_ids)
             counter = counter + 1
             if counter % 100 == 0:
-                print '[{0}] Processing {1} of {2} checkins ({3}%)'.format(str(datetime.now()), counter, len(scheckins), counter*100.0/len(scheckins))
+                print('[{0}] Processing {1} of {2} checkins ({3}%)'.format(str(datetime.now()), counter, len(scheckins), counter*100.0/len(scheckins)))
         except Exception as ex:
-            print 'Init checkins - Exception [counter = {0}]: ({1}) {2}'.format(counter, type(ex), ex)
-    print 'Processing {0} checkins in {1} seconds'.format(len(scheckins), process_time)
+            print('Init checkins - Exception [counter = {0}]: ({1}) {2}'.format(counter, type(ex), ex))
+    print('Processing {0} checkins in {1} seconds'.format(len(scheckins), process_time))
 
 def init_venue_categories(f_venue, f_distribution):
-    print f_venue
-    print f_distribution
+    print(f_venue)
+    print(f_distribution)
     query_time = time.time()
     counter = 0
     venueCategories = {}
@@ -306,9 +306,9 @@ def init_venue_categories(f_venue, f_distribution):
             venueCategories[_vid] = vc
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print '[{0}] Processing {1} venue categories'.format(str(datetime.now()), counter)
+                print('[{0}] Processing {1} venue categories'.format(str(datetime.now()), counter))
     process_time = int(time.time() - query_time)
-    print 'Processing {0} venue categories in {1} seconds'.format(counter, process_time)
+    print('Processing {0} venue categories in {1} seconds'.format(counter, process_time))
     show_object_size(venueCategories, 'venueCategories')
 
 # Configuration
@@ -341,7 +341,7 @@ def load_secret(config_secret):
         json_data = json.loads(json_str)
         client_id = json_data['client_id']
         client_secret = json_data['client_secret']
-    print 'Configuration loaded'
+    print('Configuration loaded')
     return client_id, client_secret
 
 def init_config_folder(input_folder, f_config, f_secret):
@@ -373,9 +373,9 @@ if __name__ == '__main__':
         if MODE == MODE_OPTS[0]:
             output_venue_dis = sys.argv[3]
         f_config, f_secret = init_config_folder(input_folder, f_config, f_secret)
-        print 'Working directory: %s' % input_folder
+        print('Working directory: %s' % input_folder)
     else :
-        print 'Please use these parameters to run the program : python analysis.py <MODE> <Input Folder> <Other parameters>'
+        print('Please use these parameters to run the program : python analysis.py <MODE> <Input Folder> <Other parameters>')
         exit(0)
     start_time = time.time()
     ### Load configuration in json file
@@ -410,16 +410,16 @@ if __name__ == '__main__':
                 pass
             query_time = time.time()
             str_out = ''
-            for vid, venue in venues.iteritems():
+            for vid, venue in venues.items():
                 counter += 1
                 if counter % 4500 == 0: # 5000 is the limit
                     process_time = int(time.time() - query_time)
-                    print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
+                    print('Processing {0} venues in {1} seconds'.format(counter, process_time))
                     #wait_time = 3600 - process_time + 1
                     #if wait_time > 0:
-                    #    print 'Need to wait %d seconds ... ' % wait_time
+                    #    print('Need to wait %d seconds ... ' % wait_time)
                     #    time.sleep(wait_time)
-                    #    print 'Continue querying ...'
+                    #    print('Continue querying ...')
                 try:
                     if venue.count > 0:
                         cat_ids = None
@@ -427,10 +427,10 @@ if __name__ == '__main__':
                             cat_ids = search_venue_categories(venue.lat, venue.lon, search_radius)
                             if cat_ids == None:
                                 process_time = int(time.time() - query_time)
-                                print 'Processing {0} venues in {1} seconds'.format(counter, process_time)
+                                print('Processing {0} venues in {1} seconds'.format(counter, process_time))
                         category_distribution = process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING_CATEGORY_DAY, USING_CATEGORY_TIME, USING_CATEGORY_DAY_TIME)
                         # Handle outputs
-                        # print category_distribution
+                        # print(category_distribution)
                         cats = ','.join(str(x) for x in category_distribution)
                         str_out += '{0},{1}\n'.format(vid , cats)
                     if counter % 50 == 0:
@@ -438,40 +438,40 @@ if __name__ == '__main__':
                             fout.write(str_out)
                         str_out = ''
                         process_time = int(time.time() - query_time)
-                        print '[{0}] Processing {1} venues in {2} seconds ({3:.3f}% completed)'.format(str(datetime.now()), counter, process_time, float(counter*100.0/len(venues)))
+                        print('[{0}] Processing {1} venues in {2} seconds ({3:.3f}% completed)'.format(str(datetime.now()), counter, process_time, float(counter*100.0/len(venues))))
                 except Exception as ex:
-                    print ex
+                    print('Exception: ' + str(ex))
             # Write remaining output
             if str_out != '':
                 with open(f_output_folder + '/' + output_venue_dis, 'a') as fout:
                     fout.write(str_out)
     elif MODE == MODE_OPTS[1]:
-        for uid, user in users.iteritems():
+        for uid, user in users.items():
             counter += 1
             if counter % 10000 == 0:
-                print '{} Processing {} users'.format(str(datetime.now()), counter)
+                print('{} Processing {} users'.format(str(datetime.now()), counter))
             if user.total_cat_dis > 0:
-                #print uid
-                #print user.total_checkins
-                #print user.total_cat_dis
-                #print user.total_cat_dis
-                #print user.cat_dis
+                #print(uid)
+                #print(user.total_checkins)
+                #print(user.total_cat_dis)
+                #print(user.total_cat_dis)
+                #print(user.cat_dis)
                 # Categories
                 if USING_CATEGORY:
                     f_out = '{0}/{1}_cat.txt'.format(f_output_folder, uid)
-                    print f_out
+                    print(f_out)
                     result = re.sub('(\[)|(\])', '', str(user.cat_dis))
                     write_to_file(f_out, result, False)
                 # Time slots
                 if USING_TIME:
                     f_out = '{0}/{1}_time.txt'.format(f_output_folder, uid)
-                    print f_out
+                    print(f_out)
                     result = re.sub('(\[)|(\])', '', str(user.timeslots))
                     write_to_file(f_out, result, False)
                 # Time slots
                 if USING_DAY_TIME:
                     f_out = '{0}/{1}_alltime.txt'.format(f_output_folder, uid)
-                    print f_out
+                    print(f_out)
                     result = re.sub('(\[)|(\])', '', str(user.all_timeslots))
                     write_to_file(f_out, result, False)           
                 # show_object_size(categories, 'categories')
