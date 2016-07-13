@@ -134,6 +134,7 @@ def write_to_file(filename, text, append=True):
         mode = 'w'
     with open(filename, mode) as fw:
         fw.write(str(text) + '\n')
+    pass
 
 # Foursquare related
 def auth_4sq(client_id, client_secret):
@@ -148,16 +149,15 @@ def search_venue_categories(lat, lon, search_radius):
     ll = str(lat) + ',' + str(lon)
     try:
         b = client.venues.search(params={'intent':'browse', 'll': ll, 'radius':search_radius, 'limit':50})
-        venues = b['venues']
-        for v in venues:
+        vv = b['venues']
+        for v in vv:
             cats = v['categories']
             for cat in cats:
                 cat_id = cat['id']
                 cat_ids.append(cat_id)
     except Exception as ex:
         print('Search Venue Categories Exception : {0}'.format(ex))
-        with open('error.log', 'a') as fout:
-            fout.write('Search Venue Categories Exception : {0}\n'.format(ex))
+        write_to_file('error.log', '[{}]Search Venue Categories Exception : {}\n'.format(str(datetime.now()), ex))
         if str(ex) == 'Quota exceeded':
             print('Let the program sleep for 10 minutes')
             time.sleep(600) # Delay 10 minutes for another crawler
@@ -193,62 +193,52 @@ def process_venue_categories(cat_ids, cat_int, categories, USING_CATEGORY, USING
     return category_distribution
 
 # Init functions
-def init_categories(filename):
+def init_objects(filename, obj_type, data_map):
     counter = 0
     query_time = time.time()
     with open(filename, 'r') as fr:
         for line in fr:
             split = line.strip().split(',')
-            _id = split[0]
-            _name = split[1]
-            _parent_id = split[2]
-            _level = int(split[3])
-            cat_int[_id] = counter
-            parent = None
-            if _parent_id != '':
-                parent = categories[_parent_id]
-            categories[_id] = Category(_id, _name, parent, _level)
+            if obj_type == 'categories':
+                init_categories(split, data_map, counter)
+            elif obj_type == 'venues':
+                init_venues(split, data_map)
+            elif obj_type == 'users':
+                init_users(split, data_map)
             counter = counter + 1
             if counter % COUNTER_SEPARATOR == 0:
-                print('[{0}] Processing {1} categories'.format(str(datetime.now()), counter))
+                print('[{}] Processing {} {}'.format(str(datetime.now()), counter, obj_type))
     process_time = int(time.time() - query_time)
-    print('Processing {0} categories in {1} seconds'.format(counter, process_time))
-    show_object_size(categories, 'categories')
-    
-def init_venues(filename):
-    counter = 0
-    query_time = time.time()
-    with open(filename, 'r') as fr:
-        for line in fr:
-            split = line.strip().split(',')
-            _id = int(split[0])
-            _count = int(split[1])
-            _lat = float(split[2])
-            _lon = float(split[3])
-            venues[_id] = Venue(_id, _count, _lat, _lon)
-            counter = counter + 1
-            if counter % COUNTER_SEPARATOR == 0:
-                print('[{0}] Processing {1} venues'.format(str(datetime.now()), counter))
-    process_time = int(time.time() - query_time)
-    print('Processing {0} venues in {1} seconds'.format(counter, process_time))
-    show_object_size(venues, 'venues')
+    print('Processing {} {} in {} seconds'.format(counter, obj_type, process_time))
+    # show_object_size(data_map, obj_type)
 
-def init_users(filename):
-    counter = 0
-    query_time = time.time()
-    with open(filename, 'r') as fr:
-        for line in fr:
-            split = line.strip().split(',')
-            _id = int(split[0])
-            u = User(_id)
-            #u.init_cat_dis(len(cat_int))
-            users[_id] = u
-            counter = counter + 1
-            if counter % COUNTER_SEPARATOR == 0:
-                print('[{0}] Processing {1} users'.format(str(datetime.now()), counter))
-    process_time = int(time.time() - query_time)
-    print('Processing {0} users in {1} seconds'.format(counter, process_time))
-    show_object_size(users, 'users')
+def init_categories(array, data_map, counter):
+    _id = array[0]
+    _name = array[1]
+    _parent_id = array[2]
+    _level = int(array[3])
+    cat_int[_id] = counter
+    parent = None
+    if _parent_id != '':
+        parent = categories[_parent_id]
+    data_map[_id] = Category(_id, _name, parent, _level)
+    return data_map
+    
+def init_venues(array, data_map):
+    _id = int(array[0])
+    _count = int(array[1])
+    _lat = float(array[2])
+    _lon = float(array[3])
+    print(_id)
+    data_map[_id] = Venue(_id, _count, _lat, _lon)
+    return data_map
+
+def init_users(array, data_map):
+    _id = int(array[0])
+    u = User(_id)
+    #u.init_cat_dis(len(cat_int))
+    data_map[_id] = u
+    return data_map
 
 def init_checkins(filename, search_radius):
     print('Initializing checkins ...')
@@ -386,15 +376,15 @@ if __name__ == '__main__':
     if MODE == MODE_OPTS[0]:
         client = auth_4sq(client_id, client_secret)
     ### Initialize categories on 4sq
-    init_categories(f_categories)
+    init_objects(f_categories, 'categories', categories)
     ### Initialize venues
     if MODE == MODE_OPTS[0]:
-        init_venues(f_venues)
+        init_objects(f_venues, 'venues', venues)
     if MODE == MODE_OPTS[1]:
         init_venue_categories(f_venues, f_distribution)
     ### Initialize users
     if MODE == MODE_OPTS[1]:
-        init_users(f_users)
+        init_objects(f_users, 'users', users)
     ### Assign check-ins
     if MODE == MODE_OPTS[1]:
         init_checkins(f_checkins, search_radius)
@@ -412,6 +402,7 @@ if __name__ == '__main__':
             str_out = ''
             for vid, venue in venues.items():
                 counter += 1
+                print('venue id: {}'.format(vid))
                 if counter % 4500 == 0: # 5000 is the limit
                     process_time = int(time.time() - query_time)
                     print('Processing {0} venues in {1} seconds'.format(counter, process_time))
@@ -434,8 +425,7 @@ if __name__ == '__main__':
                         cats = ','.join(str(x) for x in category_distribution)
                         str_out += '{0},{1}\n'.format(vid , cats)
                     if counter % 50 == 0:
-                        with open(f_output_folder + '/' + output_venue_dis, 'a') as fout:
-                            fout.write(str_out)
+                        write_to_file(f_output_folder + '/' + output_venue_dis, str_out)
                         str_out = ''
                         process_time = int(time.time() - query_time)
                         print('[{0}] Processing {1} venues in {2} seconds ({3:.3f}% completed)'.format(str(datetime.now()), counter, process_time, float(counter*100.0/len(venues))))
