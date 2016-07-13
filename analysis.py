@@ -229,7 +229,7 @@ def init_venues(array, data_map):
     _count = int(array[1])
     _lat = float(array[2])
     _lon = float(array[3])
-    print(_id)
+    # print(_id)
     data_map[_id] = Venue(_id, _count, _lat, _lon)
     return data_map
 
@@ -402,7 +402,7 @@ if __name__ == '__main__':
             str_out = ''
             for vid, venue in venues.items():
                 counter += 1
-                print('venue id: {}'.format(vid))
+                # print('venue id: {}'.format(vid))
                 if counter % 4500 == 0: # 5000 is the limit
                     process_time = int(time.time() - query_time)
                     print('Processing {0} venues in {1} seconds'.format(counter, process_time))
